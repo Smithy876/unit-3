@@ -1,155 +1,249 @@
-//execute script when window is loaded
-window.onload = function(){
+(function(){
 
-    //SVG dimension variables
-    var w = 900, h = 500;
+    //pseudo-global variables
+    var attrArray = ["total-pop", "percent-below-poverty-level", "median-income", "work-outside-place-of-residence", "non-white-hispanic"];
+    var expressed = attrArray[0]; //initial attribute
 
-    //Example 1.2 line 1...container block
-    var container = d3.select("body") //get the <body> element from the DOM
-        .append("svg") //put a new svg in the body
-        .attr("width", w) //assign the width
-        .attr("height", h) //assign the height
-        .attr("class", "container") //always assign a class (as the block name) for styling and future selection
-        .style("background-color", "rgba(0,0,0,0.2)"); //only put a semicolon at the end of the block!
 
-    //innerRect block
-    var innerRect = container.append("rect") //new rect in SVG
-        .datum(400) //single value
-        .attr("width", function(d){ //rect width
-            return d * 2;
-        })
-        .attr("height", function(d){ //rect height
-            return d;
-        })
-        .attr("class", "innerRect")
-        .attr("x", 50)
-        .attr("y", 50)
-        .style("fill", "#FFFFFF");
+    //begin script when window loads
+    window.onload = setMap();
 
-    var cityPop = [
-        {
-            city: 'Madison',
-            population: 233209
-        },
-        {
-            city: 'Milwaukee',
-            population: 594833
-        },
-        {
-            city: 'Green Bay',
-            population: 104057
-        },
-        {
-            city: 'Superior',
-            population: 27244
-        }
-    ];
+    //set up choropleth map
+    function setMap(){
 
-    var x = d3.scaleLinear() //create the scale
-        .range([90, 750]) //output min and max
-        .domain([0, 3]); //input min and max
+        // map begins
+        //map frame dimensions
+        var width = window.innerWidth * 0.5,
+            height = 460;
 
-    //find the minimum value of the array
-    var minPop = d3.min(cityPop, function(d){
-        return d.population;
-    });
+        //create new svg container for the map
+        var map = d3.select("body")
+            .append("svg")
+            .attr("class", "map")
+            .attr("width", width)
+            .attr("height", height);
 
-    //find the maximum value of the array
-    var maxPop = d3.max(cityPop, function(d){
-        return d.population;
-    });
+        // var backing = map.append("rect")
+        //     .attr("class", "backing")
+        //     .attr("width", width)
+        //     .attr("height", height)
 
-    //scale for circles center y coordinate
-    var y = d3.scaleLinear()
-        .range([450, 50])
-        .domain([0, 700000]);
+        //create Albers equal area conic projection centered on Dane County
+        var projection = d3.geoAlbers()
+            .center([0, 43.07])
+            .rotate([89.42, 0, 0])
+            .parallels([42.95, 43.24])
+            .scale(50000)
+            .translate([width / 2, height / 2]);
 
-    //color scale generator
-    var color = d3.scaleLinear()
-        .range([
-            "#FDBE85",
-            "#D94701"
-        ])
-        .domain([
-            minPop,
-            maxPop
-        ]);
+        var path = d3.geoPath()
+            .projection(projection);
 
-    var circles = container.selectAll(".circles") //create an empty selection
-        .data(cityPop) //here we feed in an array
-        .enter() //one of the great mysteries of the universe
-        .append("circle") //inspect the HTML--holy crap, there's some circles there
-        .attr("class", "circles")
-        .attr("id", function(d){
-            return d.city;
-        })
-        .attr("r", function(d){
-            //calculate the radius based on population value as circle area
-            var area = d.population * 0.01;
-            return Math.sqrt(area/Math.PI);
-        })
-        .attr("cx", function(d, i){
-            //use the scale generator with the index to place each circle horizontally
-            return x(i);
-        })
-        .attr("cy", function(d){
-            return y(d.population);
-        })
-        .style("fill", function(d, i){ //add a fill based on the color scale generator
-            return color(d.population);
-        })
-        // .style("stroke", "#000"); //black circle stroke
+        // map ends
 
-        var yAxis = d3.axisLeft(y);
+        //use Promise.all to parallelize asynchronous data loading
+        var promises = [d3.csv("data/dane.csv"),
+                        d3.json("data/YaharaLakes.json"),
+                        d3.json("data/MunicipalBoundaries.json")
+                        ];
+        Promise.all(promises).then(callback);
 
-    //create axis g element and add axis
-    var axis = container.append("g")
-        .attr("class", "axis")
-        .attr("transform", "translate(50, 0)")
-        .call(yAxis);
+        function callback(data){
+            csvData = data[0];
+            water = data[1];
+            dane = data[2];
 
-    var title = container.append("text")
-        .attr("class", "title")
-        .attr("text-anchor", "middle")
-        .attr("x", 450)
-        .attr("y", 32.5)
-        .text("Wisconsin City Populations");
+            //translate TopoJSONs
+            var yaharaLakes = topojson.feature(water, water.objects.YaharaLakes),
+                daneMunicipalities = topojson.feature(dane, dane.objects.MunicipalBoundaries).features;
 
-    //create circle labels
-    var labels = container.selectAll(".labels")
-        .data(cityPop)
-        .enter()
-        .append("text")
-        .attr("class", "labels")
-        .attr("text-anchor", "left")
-        .attr("y", function(d){
-            //vertical position centered on each circle
-            return y(d.population) - 2;
+            //join csv data to GeoJSON enumeration units
+            daneMunicipalities = joinData(daneMunicipalities, csvData);
+
+            //create the color scale
+            var colorScale = makeColorScale(csvData);
+
+            //add enumeration units to the map
+            setEnumerationUnits(daneMunicipalities, map, path, colorScale);
+
+            //add Yahara lakes to map
+            var lakes = map.append("path")
+                .datum(yaharaLakes)
+                .attr("class", "lakes")
+                .attr("d", path);
+
+            //add coordinated visualization to the map
+            setChart(csvData, colorScale);
+        };
+    };
+
+
+    function joinData(daneMunicipalities, csvData){
+        //loop through csv to assign each set of csv attribute values to geojson municipality
+        for (var i=0; i<csvData.length; i++){
+            var csvMuni = csvData[i]; //the current region
+            var csvKey = csvMuni.LABEL; //the CSV primary key
+
+            //loop through geojson regions to find correct municipality
+            for (var a=0; a<daneMunicipalities.length; a++){
+
+                var geojsonProps = daneMunicipalities[a].properties; //the current municipality geojson properties
+                var geojsonKey = geojsonProps.LABEL; //the geojson primary key
+
+                //where primary keys match, transfer csv data to geojson properties object
+                if (geojsonKey == csvKey){
+
+                    //assign all attributes and values
+                    attrArray.forEach(function(attr){
+                        var val = parseFloat(csvMuni[attr]); //get csv attribute value
+                        geojsonProps[attr] = val; //assign attribute and value to geojson properties
+                    });
+                };
+            };
+        };
+        return daneMunicipalities;
+    };
+
+
+    //function to create color scale generator
+    function makeColorScale(data){
+        var colorClasses = [
+            "#045a8d",
+            "#2b8cbe",
+            "#74a9cf",
+            "#bdc9e1",
+            "#f1eef6"
+        ];
+
+        //create color scale generator
+        var colorScale = d3.scaleThreshold()
+            .range(colorClasses);
+
+        //build array of all values of the expressed attribute
+        var domainArray = [];
+        for (var i=0; i<data.length; i++){
+            var val = parseFloat(data[i][expressed]);
+            domainArray.push(val);
+        };
+
+        //cluster data using ckmeans clustering algorithm to create natural breaks
+        var clusters = ss.ckmeans(domainArray, 5);
+        //reset domain array to cluster minimums
+        domainArray = clusters.map(function(d){
+            return d3.min(d);
         });
+        //remove first value from domain array to create class breakpoints
+        domainArray.shift();
 
-    //create format generator
-    var format = d3.format(",");
+        //assign array of last 4 cluster minimums as domain
+        colorScale.domain(domainArray);
 
-    //first line of label
-    var nameLine = labels.append("tspan")
-        .attr("class", "nameLine")
-        .attr("x", function(d,i){
-            //horizontal position to the right of each circle
-            return x(i) + Math.sqrt(d.population * 0.01 / Math.PI) + 5;
-        })
-        .text(function(d){
-            return d.city;
-        });
+        return colorScale;
+    };
 
-    //second line of label
-    var popLine = labels.append("tspan")
-        .attr("class", "popLine")
-        .attr("x", function(d,i){
-            return x(i) + Math.sqrt(d.population * 0.01 / Math.PI) + 5;
-        })
-        .attr("dy", "15") //vertical offset
-        .text(function(d){
-            return "Pop. " + format(d.population); //use format generator to format numbers
-        });
+    function setEnumerationUnits(daneMunicipalities, map, path, colorScale){
+        //add Dane County municipalities to map
+        var municipalities = map.selectAll(".municipalities")
+            .data(daneMunicipalities)
+            .enter()
+            .append("path")
+            .attr("class", function(d){
+                return "municipalities " + d.properties.MCD_NAME;
+            })
+            .attr("d", path)
+            .style("fill", function(d){
+                var value = d.properties[expressed];
+                if(value) {
+                    return colorScale(d.properties[expressed]);
+                } else {
+                    return "#535353";
+                }
+            });
+    };
 
-};
+    //function to create coordinated bar chart
+    function setChart(csvData, colorScale){
+        //chart frame dimensions
+        var chartWidth = window.innerWidth * 0.425,
+            chartHeight = 473,
+            leftPadding = 25,
+            rightPadding = 2,
+            topBottomPadding = 5,
+            chartInnerWidth = chartWidth - leftPadding - rightPadding,
+            chartInnerHeight = chartHeight - topBottomPadding * 2,
+            translate = "translate(" + leftPadding + "," + topBottomPadding + ")";
+
+        //create a second svg element to hold the bar chart
+        var chart = d3.select("body")
+            .append("svg")
+            .attr("width", chartWidth)
+            .attr("height", chartHeight)
+            .attr("class", "chart");
+
+        //create a rectangle for chart background fill
+        var chartBackground = chart.append("rect")
+            .attr("class", "chartBackground")
+            .attr("width", chartInnerWidth)
+            .attr("height", chartInnerHeight)
+            .attr("transform", translate);
+
+
+        //create a scale to size bars proportionally to frame
+        var yScale = d3.scaleLinear()
+            .range([463, 0])
+            .domain([0, 250000]);
+
+        //create vertical axis generator
+        var yAxis = d3.axisLeft()
+            .scale(yScale);
+
+        //place axis
+        var axis = chart.append("g")
+            .attr("class", "axis")
+            .attr("transform", translate)
+            .call(yAxis);
+
+        //create frame for chart border
+        var chartFrame = chart.append("rect")
+            .attr("class", "chartFrame")
+            .attr("width", chartInnerWidth)
+            .attr("height", chartInnerHeight)
+            .attr("transform", translate);
+
+        //set bars for each province
+        var bars = chart.selectAll(".bar")
+            .data(csvData)
+            .enter()
+            .append("rect")
+            .sort(function(a, b){
+                return b[expressed]-a[expressed]
+            })
+            .attr("class", function(d){
+                return "bar " + d.LABEL;
+            })
+            .attr("width", chartInnerWidth / csvData.length - 1)
+            .attr("x", function(d, i){
+                return i * (chartInnerWidth / csvData.length) + leftPadding;
+            })
+            .attr("height", function(d, i){
+                return 463 - yScale(parseFloat(d[expressed]));
+            })
+            .attr("y", function(d, i){
+                return yScale(parseFloat(d[expressed])) + topBottomPadding;
+            })
+            .style("fill", function(d){
+                return colorScale(d[expressed]);
+            });
+
+        var chartTitle = chart.append("text")
+            .attr("x", 40)
+            .attr("y", 40)
+            .attr("class", "chartTitle")
+            .text("Population of Municipalities in Dane County");
+
+
+    };
+
+
+
+})();

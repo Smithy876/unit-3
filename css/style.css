@@ -16,3 +16,63 @@
     font-size: 1.5em;
     font-weight: bold;
 }
+
+.municipalities {
+    /* fill: #66CDFF; */
+    stroke: #07091F;
+    stroke-width: .5px;
+}
+
+.lakes {
+    fill: #021116;
+}
+
+/* .backing {
+    fill: #021116;
+} */
+
+.map {
+    background-color: #021116;
+    border: medium solid #002630;
+    margin: 10px 0 0 20px;
+}
+
+.chart {
+    align: left;
+    margin: 10px 20px 0 20px;
+}
+
+.chartBackground {
+    fill: #021116;
+}
+
+.chartFrame {
+    fill: none;
+    stroke: #002630;
+    stroke-width: 6px;
+    shape-rendering: crispEdges;
+}
+
+.axis path,
+.axis line {
+    fill: none;
+    stroke: #CCC;
+    stroke-width: 1px;
+    shape-rendering: crispEdges;
+}
+
+.axis text {
+    font-family: "Kanit", sans-serif;
+    font-size: 0.8em;
+    fill: #CCC;
+}
+
+
+
+.chartTitle {
+    font-family: "Kanit", sans-serif;
+    font-weight: 900;
+    font-size: 1.25em;
+    letter-spacing: 1px;
+    fill: #FFF;
+}
