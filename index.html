@@ -6,6 +6,9 @@
             <title></title>
 
         <!--put your external stylesheet links here-->
+        <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css"/>
+        <link rel="stylesheet" type="text/css" href="css/bootstrap-grid.min.css"/>
+        <link rel="stylesheet" type="text/css" href="css/bootstrap-reboot.min.css"/>
         <link rel="stylesheet" href="css/style.css">
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Kanit">
 
@@ -19,6 +22,17 @@
     </head>
 
     <body>
+      <div class = "container-fluid"> <!-- start of main container -->
+
+        <!-- title -->
+        <div class="row">
+          <div class="col-md-2"></div>
+          <div class="col-md-8">
+            <div id="map"</div>
+          </div>
+          <div class="col-md-2"></div>
+        </div>
+
         <!--put your initial page content here-->
 
         <!--you can also use this space for internal scripts;
@@ -28,6 +42,8 @@
         <script type="text/javascript" src="lib/d3.js"></script>
         <script type="text/javascript" src="lib/topojson.js"></script>
         <script src='https://unpkg.com/simple-statistics@7.3.0/dist/simple-statistics.min.js'></script>
+        <script type= "text/javascript" src= "lib/bootstrap.min.js"/></script>
+        <script type= "text/javascript" src= "lib/bootstrap.bundle.min.js"/></script>
         <script type="text/javascript" src="js/main.js"></script>
     </body>
 </html>

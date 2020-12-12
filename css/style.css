@@ -67,12 +67,55 @@
     fill: #CCC;
 }
 
-
-
 .chartTitle {
     font-family: "Kanit", sans-serif;
     font-weight: 900;
     font-size: 1.25em;
     letter-spacing: 1px;
     fill: #FFF;
+}
+
+.mapTitle {
+    font-family: "Kanit", sans-serif;
+    font-weight: 900;
+    font-size: 1.25em;
+    letter-spacing: 1px;
+    fill: #FFF;
+}
+
+.dropdown {
+    position: absolute;
+    top: 30px;
+    left: 40px;
+    z-index: 10;
+    font-family: "Kanit", sans-serif;
+    font-size: 1em;
+    font-weight: bold;
+    padding: 2px;
+    border: 1px solid #002630;
+    box-shadow: 2px 2px 4px #002630;
+}
+
+option {
+  font-family: "Kanit", sans-serif;
+  font-weight: normal;
+}
+
+.infolabel {
+    margin: 0 20px 0 0;
+    position: absolute;
+    height: 50px;
+    min-width: 100px;
+    color: #fff;
+    background-color: #000;
+    border: solid thin #fff;
+    padding: 5px 10px;
+    top: -75px;
+}
+
+.infolabel h1 {
+    margin: 0 20px 0 0;
+    padding: 0;
+    display: inline-block;
+    line-height: 1em;
 }
